@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "673586780607",
+    "project_id": "ai-wallpaper-beb91",
+    "storage_bucket": "ai-wallpaper-beb91.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:673586780607:android:f9fa54eef687b11365290a",
+        "android_client_info": {
+          "package_name": "com.Updesh.AIWallpaper"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "673586780607-ttikvl0et8j8hoqer6stqqjtv16jt37m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Updesh.AIWallpaper",
+            "certificate_hash": "74106e8d2d4843cd69f4057d42f43d5a15f03155"
+          }
+        },
+        {
+          "client_id": "673586780607-li65b8f921i17etc51u0fp4n2ruh6ct0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqCSGNl9MyCH6GQUOJGCLjo3jn6f88O2Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "673586780607-li65b8f921i17etc51u0fp4n2ruh6ct0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "673586780607-rikpp5heteksbddbtsovio3khef15b69.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.Updesh.AIWallpaper"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
