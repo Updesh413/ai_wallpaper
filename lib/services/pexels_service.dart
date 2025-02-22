@@ -5,9 +5,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class PexelsService {
   final String apiKey = dotenv.env['PEXELS_API'] ?? '';
 
-  Future<List<String>> fetchWallpapers(String query, int page) async {
+  Future<List<String>> fetchWallpapers(String category, int page) async {
+    final query = Uri.encodeComponent(category);
     final url = Uri.parse(
         'https://api.pexels.com/v1/search?query=$query&per_page=20&page=$page');
+
     final response = await http.get(url, headers: {'Authorization': apiKey});
 
     if (response.statusCode == 200) {

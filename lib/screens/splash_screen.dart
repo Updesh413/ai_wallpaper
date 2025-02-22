@@ -1,8 +1,12 @@
 import 'dart:async';
-
-import 'package:ai_wallpaper/screens/onboard_screen.dart';
+import 'package:ai_wallpaper/screens/login_screen.dart';
+import 'package:ai_wallpaper/screens/biometric_auth_screen.dart'; // Add this import
+import 'package:firebase_auth/firebase_auth.dart'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:ai_wallpaper/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'home_screen.dart'; // Add this import
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -46,16 +50,69 @@ class _SplashScreenState extends State<SplashScreen>
 
     _startLoadingProgress();
 
+    // Delay for 3 seconds, then check authentication state
     Timer(
       const Duration(seconds: 3),
-      () {
+      () async {
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OnboardScreen(),
-            ),
-          );
+          final user = FirebaseAuth.instance.currentUser;
+          final prefs = await SharedPreferences.getInstance();
+          final biometricEnabled = prefs.getBool('biometricEnabled') ?? false;
+
+          if (user == null) {
+            // User is not logged in, navigate to LoginScreen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LoginScreen(),
+              ),
+            );
+          } else {
+            // Check if the user still exists in Firebase
+            try {
+              final userInfo = await user.getIdTokenResult();
+              if (userInfo.token == null) {
+                // User no longer exists in Firebase, navigate to LoginScreen
+                await FirebaseAuth.instance.signOut(); // Clear local auth state
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
+                );
+              } else if (biometricEnabled) {
+                // User is logged in and biometric is enabled, navigate to BiometricAuthScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BiometricAuthScreen(user: user),
+                  ),
+                );
+              } else {
+                // User is logged in but biometric is not enabled, navigate to HomeScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HomeScreen(
+                      userId: user.uid,
+                      userEmail: user.email!,
+                      userName: user.displayName ?? 'User',
+                    ),
+                  ),
+                );
+              }
+            } catch (e) {
+              // Handle errors (e.g., network issues)
+              print("Error checking user existence: $e");
+              await FirebaseAuth.instance.signOut(); // Clear local auth state
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LoginScreen(),
+                ),
+              );
+            }
+          }
         }
       },
     );

@@ -23,7 +23,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
+    await _auth.signOut(); // Sign out from Firebase
   }
 
   Future<User?> registerWithEmail(String email, String password) async {
@@ -61,5 +61,12 @@ class AuthService {
     }
 
     return {};
+  }
+
+  // Add this method to forcefully clear the authentication state
+  Future<void> clearAuthState() async {
+    await _auth.signOut(); // Sign out from Firebase
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut(); // Sign out from Google
   }
 }
