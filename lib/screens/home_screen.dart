@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    fetchWallpapers();
+    fetchWallpapers(); // Fetch random wallpapers on app launch
     _scrollController.addListener(_scrollListener);
     _loadBiometricSetting();
   }
@@ -93,8 +94,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
+      // Generate a random query or category
+      final randomQuery = _getRandomQuery();
       final fetchedWallpapers = await _pexelsService.fetchWallpapers(
-        selectedCategory == 'All' ? 'wallpapers' : selectedCategory,
+        randomQuery,
         page,
       );
       setState(() {
@@ -105,6 +108,20 @@ class _HomeScreenState extends State<HomeScreen> {
       print('Error: $e');
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  /// Generate a random query or category
+  String _getRandomQuery() {
+    final random = Random();
+    if (selectedCategory == 'All') {
+      // If "All" is selected, pick a random category
+      final randomCategory =
+          categories[random.nextInt(categories.length - 1) + 1]; // Skip "All"
+      return randomCategory.toLowerCase();
+    } else {
+      // If a specific category is selected, use it
+      return selectedCategory.toLowerCase();
     }
   }
 
@@ -120,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedCategory = category;
       page = 1; // Reset pagination when category changes
     });
-    fetchWallpapers();
+    fetchWallpapers(); // Fetch random wallpapers for the selected category
   }
 
   @override

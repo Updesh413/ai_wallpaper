@@ -1,13 +1,12 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:ai_wallpaper/screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:local_auth/local_auth.dart'; // Add this import
+import 'package:local_auth/local_auth.dart';
 import '../screens/login_screen.dart';
+import '../screens/settings_screen.dart'; // Import the SettingsScreen
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 
@@ -50,6 +49,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
     if (cachedAvatar != null && cachedUsername != null) {
       setState(() {
         _avatarBase64 = cachedAvatar;
+        widget.userName = cachedUsername;
       });
     } else {
       DocumentSnapshot snapshot = await FirebaseFirestore.instance
@@ -115,70 +115,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
     }
   }
 
-  /// Open image picker and upload selected image
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      Uint8List bytes = await pickedFile.readAsBytes();
-      String base64String = base64Encode(bytes);
-
-      // Ask for username if missing
-      String newUsername = widget.userName;
-      if (widget.userName == 'User') {
-        newUsername = await _promptForUsername();
-      }
-
-      // Save data to Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .set(
-        {'avatar': base64String, 'username': newUsername},
-        SetOptions(merge: true),
-      );
-
-      // Save locally
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('avatar_${widget.userId}', base64String);
-      await prefs.setString('username_${widget.userId}', newUsername);
-
-      setState(() {
-        _avatarBase64 = base64String;
-        widget.userName = newUsername;
-      });
-    }
-  }
-
-  /// Prompt user to enter a username
-  Future<String> _promptForUsername() async {
-    String username = '';
-    await showDialog(
-      context: context,
-      builder: (context) {
-        TextEditingController controller = TextEditingController();
-        return AlertDialog(
-          title: const Text("Set Username"),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: "Enter username"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                username = controller.text;
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-    return username.isNotEmpty ? username : "User";
-  }
-
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -220,7 +156,32 @@ class _CustomDrawerState extends State<CustomDrawer> {
               ),
             ),
           ),
-          // Add the biometric switch here
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () async {
+              // Navigate to SettingsScreen and wait for the result
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    userId: widget.userId,
+                    userEmail: widget.userEmail,
+                    userName: widget.userName,
+                    avatarBase64: _avatarBase64,
+                  ),
+                ),
+              );
+
+              // Update the UI with the new username and avatar
+              if (result != null) {
+                setState(() {
+                  widget.userName = result['username'];
+                  _avatarBase64 = result['avatar'];
+                });
+              }
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.fingerprint),
             title: const Text('Enable Biometric Authentication'),
@@ -229,8 +190,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
               onChanged: _toggleBiometric,
             ),
           ),
-          // In your logout button (e.g., in CustomDrawer)
-          // In your logout button (e.g., in CustomDrawer)
           ListTile(
             leading: Icon(Icons.logout),
             title: Text('Logout'),
