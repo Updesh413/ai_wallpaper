@@ -7,6 +7,8 @@ import '../services/pexels_service.dart';
 import '../widgets/custom_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'wallpaper_view_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   final String userId;
   final String userEmail;
@@ -226,11 +228,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (index >= wallpapers.length) {
                         return _buildShimmerEffect();
                       }
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: CachedNetworkImage(
-                          imageUrl: wallpapers[index],
-                          fit: BoxFit.cover,
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => WallpaperViewScreen(
+                                imageUrl: wallpapers[index],
+                              ),
+                            ),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: CachedNetworkImage(
+                            imageUrl: wallpapers[index],
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       );
                     },

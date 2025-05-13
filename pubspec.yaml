@@ -52,6 +52,9 @@ dependencies:
   flutter_dotenv: ^5.2.1
   font_awesome_flutter: ^10.8.0
   local_auth: ^2.3.0
+  flutter_wallpaper_manager: ^0.0.4
+  dio: ^5.8.0+1
+  path_provider: ^2.1.5
 
 flutter_native_splash:
   color: "#00C6FF"
