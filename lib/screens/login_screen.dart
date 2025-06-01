@@ -49,6 +49,8 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  bool _isGoogleSigningIn = false;
+
   void _signInWithGoogle(BuildContext context) async {
     final UserCredential? userCredential =
         await _authService.signInWithGoogle();
@@ -100,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen>
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
@@ -118,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 20),
                           TextField(
                             controller: _emailController,
                             style: const TextStyle(color: Colors.white),
@@ -272,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   TextStyle(color: Colors.white, fontSize: 18),
                             ),
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 20),
                           const Row(
                             children: [
                               Expanded(child: Divider(color: Colors.white70)),
@@ -284,23 +286,47 @@ class _LoginScreenState extends State<LoginScreen>
                               Expanded(child: Divider(color: Colors.white70)),
                             ],
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 20),
                           ElevatedButton(
-                            onPressed: () => _signInWithGoogle(context),
+                            onPressed: _isGoogleSigningIn
+                                ? null
+                                : () => _signInWithGoogle(context),
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.lightGreen,
                               minimumSize: const Size(double.infinity, 50),
                               side: const BorderSide(
-                                  color: Colors.greenAccent, width: 2),
+                                color: Colors.greenAccent,
+                                width: 2,
+                              ),
                             ),
-                            child: const Text(
-                              "Continue with Google",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
-                            ),
+                            child: _isGoogleSigningIn
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/google_logo.png',
+                                        height: 30,
+                                        width: 30,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        "Continue with Google",
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 18),
+                                      ),
+                                    ],
+                                  ),
                           ),
                           const SizedBox(height: 20),
                           TextButton(

@@ -58,8 +58,56 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadBiometricSetting() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(
-        () => _biometricEnabled = prefs.getBool('biometricEnabled') ?? false);
+    final enabled = prefs.getBool('biometricEnabled') ?? false;
+    setState(() => _biometricEnabled = enabled);
+
+    // Show biometric prompt if disabled
+    if (!enabled) {
+      Future.delayed(Duration.zero, () => _showBiometricPrompt());
+    }
+  }
+
+  void _showBiometricPrompt() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enable Biometric Login?'),
+        content: const Text(
+            'For faster and more secure logins, would you like to enable biometric authentication?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Not Now'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              final prefs = await SharedPreferences.getInstance();
+              final bioService = BiometricService(prefs);
+
+              if (await bioService.isBiometricSupported()) {
+                final authenticated = await bioService.authenticate();
+                if (authenticated) {
+                  await bioService.enableBiometric(true);
+                  setState(() => _biometricEnabled = true);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Biometric enabled')),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Biometric not supported')),
+                );
+              }
+            },
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBiometricSwitch() {

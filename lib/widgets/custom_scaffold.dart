@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'custom_drawer.dart';
 
 class CustomScaffold extends StatelessWidget {
@@ -35,6 +36,34 @@ class CustomScaffold extends StatelessWidget {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Handle subscription button click
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Plans Coming Soon!')),
+              );
+            },
+            child: Row(
+              children: [
+                SizedBox(
+                  height: 45,
+                  width: 45,
+                  child: Lottie.asset(
+                    'assets/subscribe.json',
+                    repeat: true,
+                  ),
+                ),
+                // const SizedBox(width: 2),
+                const Text(
+                  'Subscribe',
+                  style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: body,
     );

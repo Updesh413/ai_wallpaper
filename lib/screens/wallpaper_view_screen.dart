@@ -56,6 +56,7 @@ class _WallpaperViewScreenState extends State<WallpaperViewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallpaper'),
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
@@ -84,24 +85,81 @@ class _WallpaperViewScreenState extends State<WallpaperViewScreen> {
                       ? null
                       : () => _setWallpaper(context, widget.imageUrl,
                           WallpaperManager.HOME_SCREEN),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  child: const Text('Set as Home Screen Wallpaper'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    backgroundColor: Colors.green,
+                    side: const BorderSide(
+                      color: Colors.greenAccent,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Text(
+                    'Set as Home Screen Wallpaper',
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: _settingWallpaper
                       ? null
                       : () => _setWallpaper(context, widget.imageUrl,
                           WallpaperManager.LOCK_SCREEN),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  child: const Text('Set as Lock Screen Wallpaper'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    backgroundColor: Colors.green,
+                    side: const BorderSide(
+                      color: Colors.greenAccent,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Text(
+                    'Set as Lock Screen Wallpaper',
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: _settingWallpaper
                       ? null
                       : () => _setWallpaper(context, widget.imageUrl,
                           WallpaperManager.BOTH_SCREEN),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  child: const Text('Set as Both Screen Wallpaper'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    backgroundColor: Colors.green,
+                    side: const BorderSide(
+                      color: Colors.greenAccent,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Text(
+                    'Set as Both Screen Wallpaper',
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed:
+                      _settingWallpaper ? null : () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    backgroundColor: Colors.red,
+                    side: const BorderSide(
+                      color: Colors.redAccent,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
                 ),
               ],
             ),

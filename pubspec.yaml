@@ -55,6 +55,15 @@ dependencies:
   flutter_wallpaper_manager: ^0.0.4
   dio: ^5.8.0+1
   path_provider: ^2.1.5
+  package_info_plus: ^8.3.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/logo.png"
+  adaptive_icon_background: "#FFFFFF" # For Android adaptive icons
+  adaptive_icon_foreground: "assets/logo.png" # Ensure this path is correct
 
 flutter_native_splash:
   color: "#00C6FF"
@@ -69,6 +78,7 @@ flutter_native_splash:
   fullscreen: true
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
   flutter_test:
     sdk: flutter
 

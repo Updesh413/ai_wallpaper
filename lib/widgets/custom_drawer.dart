@@ -9,6 +9,8 @@ import '../screens/login_screen.dart';
 import '../screens/settings_screen.dart'; // Import the SettingsScreen
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
+import 'package:lottie/lottie.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class CustomDrawer extends StatefulWidget {
   final String userId;
@@ -32,12 +34,22 @@ class _CustomDrawerState extends State<CustomDrawer> {
   String? _avatarBase64;
   bool _biometricEnabled = false; // Track biometric state
   late BiometricService _biometricService; // Biometric service instance
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadBiometricSetting();
+    _getAppVersion();
+  }
+
+  /// Load app version info
+  Future<void> _getAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = '${info.version} (${info.buildNumber})';
+    });
   }
 
   /// Load user data (avatar & username) from Firestore or local cache
@@ -156,6 +168,23 @@ class _CustomDrawerState extends State<CustomDrawer> {
               ),
             ),
           ),
+          // Uncomment the following ListTile if you want to add a subscription feature
+          // ListTile(
+          //   leading: Icon(Icons.subscriptions_rounded),
+          //   title: const Text('Subscribe'),
+          //   trailing: Lottie.asset(
+          //     'assets/subscribe.json',
+          //     height: 45,
+          //     width: 45,
+          //     repeat: true,
+          //   ),
+          //   onTap: () {
+          //     // Handle subscription click here
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       const SnackBar(content: Text('Subscribe tapped!')),
+          //     );
+          //   },
+          // ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
@@ -206,6 +235,13 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 ),
               );
             },
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Version $_appVersion',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
           ),
         ],
       ),

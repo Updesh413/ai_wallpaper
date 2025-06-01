@@ -101,12 +101,12 @@ class _SignupScreenState extends State<SignupScreen>
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 20),
+              // const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     SlideTransition(
                       position: _slideAnimation,
                       child: Column(
@@ -119,7 +119,7 @@ class _SignupScreenState extends State<SignupScreen>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _emailController,
                             style: const TextStyle(color: Colors.white),
@@ -146,7 +146,7 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
                           TextField(
                             controller: _passwordController,
                             style: const TextStyle(color: Colors.white),
@@ -187,7 +187,7 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
                           TextField(
                             style: const TextStyle(color: Colors.white),
                             obscureText: _obscureText,
@@ -227,7 +227,7 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
                           ElevatedButton(
                             onPressed: () async {
                               String email = _emailController.text.trim();
@@ -284,7 +284,7 @@ class _SignupScreenState extends State<SignupScreen>
                                   TextStyle(color: Colors.white, fontSize: 18),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
                           const Row(
                             children: [
                               Expanded(child: Divider(color: Colors.white70)),
@@ -296,25 +296,38 @@ class _SignupScreenState extends State<SignupScreen>
                               Expanded(child: Divider(color: Colors.white70)),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
                           ElevatedButton(
                             onPressed: () => _signInWithGoogle(context),
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.lightGreen,
                               minimumSize: const Size(double.infinity, 50),
                               side: const BorderSide(
-                                  color: Colors.greenAccent, width: 2),
+                                color: Colors.greenAccent,
+                                width: 2,
+                              ),
                             ),
-                            child: const Text(
-                              "Continue with Google",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/google_logo.png',
+                                  height: 30,
+                                  width: 30,
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  "Continue with Google",
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 18),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 5),
                           TextButton(
                             child: const Text(
                                 'Already have an account? Login here',
