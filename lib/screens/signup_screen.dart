@@ -21,6 +21,9 @@ class _SignupScreenState extends State<SignupScreen>
   bool _obscureText = true;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _passwordsMatch = true;
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -42,11 +45,18 @@ class _SignupScreenState extends State<SignupScreen>
     );
 
     _controller.forward();
+
+    // Add listeners
+    _passwordController.addListener(_validatePasswords);
+    _confirmPasswordController.addListener(_validatePasswords);
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -68,6 +78,13 @@ class _SignupScreenState extends State<SignupScreen>
         ),
       );
     }
+  }
+
+  void _validatePasswords() {
+    setState(() {
+      _passwordsMatch =
+          _passwordController.text == _confirmPasswordController.text;
+    });
   }
 
   @override
@@ -101,9 +118,9 @@ class _SignupScreenState extends State<SignupScreen>
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // const SizedBox(height: 20),
+              const SizedBox(height: 5),
               Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(15.0),
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
@@ -119,7 +136,7 @@ class _SignupScreenState extends State<SignupScreen>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 5),
                           TextField(
                             controller: _emailController,
                             style: const TextStyle(color: Colors.white),
@@ -146,7 +163,7 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _passwordController,
                             style: const TextStyle(color: Colors.white),
@@ -187,8 +204,9 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           TextField(
+                            controller: _confirmPasswordController,
                             style: const TextStyle(color: Colors.white),
                             obscureText: _obscureText,
                             decoration: InputDecoration(
@@ -213,21 +231,33 @@ class _SignupScreenState extends State<SignupScreen>
                                   });
                                 },
                               ),
-                              enabledBorder: const OutlineInputBorder(
+                              enabledBorder: OutlineInputBorder(
                                 borderSide: BorderSide(
-                                  color: Colors.white70,
+                                  color: _passwordsMatch
+                                      ? Colors.white70
+                                      : Colors.redAccent,
                                   width: 2,
                                 ),
                               ),
-                              focusedBorder: const OutlineInputBorder(
+                              focusedBorder: OutlineInputBorder(
                                 borderSide: BorderSide(
-                                  color: Colors.greenAccent,
+                                  color: _passwordsMatch
+                                      ? Colors.greenAccent
+                                      : Colors.redAccent,
                                   width: 2,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          if (!_passwordsMatch)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                "Passwords do not match",
+                                style: TextStyle(color: Colors.redAccent),
+                              ),
+                            ),
+                          const SizedBox(height: 10),
                           ElevatedButton(
                             onPressed: () async {
                               String email = _emailController.text.trim();
@@ -284,7 +314,7 @@ class _SignupScreenState extends State<SignupScreen>
                                   TextStyle(color: Colors.white, fontSize: 18),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           const Row(
                             children: [
                               Expanded(child: Divider(color: Colors.white70)),
@@ -296,7 +326,7 @@ class _SignupScreenState extends State<SignupScreen>
                               Expanded(child: Divider(color: Colors.white70)),
                             ],
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           ElevatedButton(
                             onPressed: () => _signInWithGoogle(context),
                             style: ElevatedButton.styleFrom(

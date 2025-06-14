@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String userId;
@@ -41,16 +42,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (pickedFile != null) {
       Uint8List bytes = await pickedFile.readAsBytes();
-      String base64String = base64Encode(bytes);
+      String compressedBase64 = await compressAndEncode(bytes);
 
       setState(() {
-        _avatarBase64 = base64String;
+        _avatarBase64 = compressedBase64;
       });
     }
   }
 
   /// Save user details to Firestore and SharedPreferences
   Future<void> _saveUserDetails() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
     final newUsername = _usernameController.text.trim();
     if (newUsername.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -59,10 +68,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    // Save data to Firestore
-    await FirebaseFirestore.instance.collection('users').doc(widget.userId).set(
+    // Save data to Firestore under the authenticated user's UID
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .set(
       {
-        'avatar': _avatarBase64,
+        'avatar': _avatarBase64 ?? '',
         'username': newUsername,
       },
       SetOptions(merge: true),
@@ -70,14 +82,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Save locally
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('avatar_${widget.userId}', _avatarBase64 ?? '');
-    await prefs.setString('username_${widget.userId}', newUsername);
+    await prefs.setString('avatar_${currentUser.uid}', _avatarBase64 ?? '');
+    await prefs.setString('username_${currentUser.uid}', newUsername);
 
     // Notify the parent widget (CustomDrawer) to update the UI
     Navigator.pop(context, {
       'username': newUsername,
       'avatar': _avatarBase64,
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('User details saved successfully')),
+    );
+  }
+
+  Future<String> compressAndEncode(Uint8List bytes) async {
+    final compressedBytes = await FlutterImageCompress.compressWithList(
+      bytes,
+      minWidth: 500,
+      minHeight: 500,
+      quality: 50, // adjust quality to lower value if needed
+    );
+    return base64Encode(compressedBytes);
   }
 
   @override
