@@ -2,6 +2,8 @@ import 'package:ai_wallpaper/screens/signup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/checkinternet_service.dart';
+import '../widgets/loading_button.dart';
 import 'home_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -51,24 +53,51 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   bool _isGoogleSigningIn = false;
+  bool _isEmailSigningIn = false;
 
   void _signInWithGoogle(BuildContext context) async {
-    final UserCredential? userCredential =
-        await _authService.signInWithGoogle();
+    try {
+      setState(() {
+        _isGoogleSigningIn = true;
+      });
 
-    if (userCredential?.user != null) {
-      final user = userCredential!.user!;
+      final UserCredential? userCredential =
+          await _authService.signInWithGoogle();
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            userId: user.uid,
-            userEmail: user.email!,
-            userName: user.displayName ?? 'User',
+      if (userCredential?.user != null) {
+        final user = userCredential!.user!;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(
+              userId: user.uid,
+              userEmail: user.email ?? '',
+              userName: user.displayName ?? 'User',
+            ),
           ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Google sign-in cancelled."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Sign-in failed: $e"),
+          backgroundColor: Colors.redAccent,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleSigningIn = false;
+        });
+      }
     }
   }
 
@@ -190,90 +219,99 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ),
                           const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () async {
-                              String email = _emailController.text.trim();
-                              String password = _passwordController.text.trim();
+                          LoadingButton(
+                            onPressed: _isEmailSigningIn
+                                ? null
+                                : () async {
+                                    bool hasInternet =
+                                        await checkInternetConnection(context);
+                                    if (!hasInternet) return;
+                                    String email = _emailController.text.trim();
+                                    String password =
+                                        _passwordController.text.trim();
 
-                              if (email.isEmpty || password.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Please enter email and password")),
-                                );
-                                return;
-                              }
+                                    if (email.isEmpty || password.isEmpty) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                "Please enter email and password")),
+                                      );
+                                      return;
+                                    }
 
-                              try {
-                                final userCredential = await _authService
-                                    .signInWithEmail(email, password);
-                                final user = userCredential?.user;
+                                    setState(() {
+                                      _isEmailSigningIn = true;
+                                    });
 
-                                if (user != null) {
-                                  await user.reload(); // Refresh user data
-                                  bool isVerified = user.emailVerified;
-                                  print(
-                                      "Email Verified: $isVerified"); // Debugging log
+                                    try {
+                                      final userCredential = await _authService
+                                          .signInWithEmail(email, password);
+                                      final user = userCredential?.user;
 
-                                  if (isVerified) {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => HomeScreen(
+                                      if (user != null) {
+                                        await user.reload();
+                                        bool isVerified = user.emailVerified;
+                                        print("Email Verified: $isVerified");
+
+                                        if (isVerified) {
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => HomeScreen(
                                                 userId: user.uid,
                                                 userEmail: user.email!,
                                                 userName:
                                                     user.displayName ?? 'User',
-                                              )),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              "Please verify your email before logging in")),
-                                    );
-                                    await FirebaseAuth.instance
-                                        .signOut(); // Log out unverified users
-                                  }
-                                }
-                              } on FirebaseAuthException catch (e) {
-                                String errorMessage =
-                                    "Invalid email or password";
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    "Please verify your email before logging in")),
+                                          );
+                                          await FirebaseAuth.instance.signOut();
+                                        }
+                                      }
+                                    } on FirebaseAuthException catch (e) {
+                                      String errorMessage =
+                                          "Invalid email or password";
 
-                                if (e.code == 'user-not-found') {
-                                  errorMessage =
-                                      "No user found with this email";
-                                } else if (e.code == 'wrong-password') {
-                                  errorMessage = "Incorrect password";
-                                } else if (e.code == 'invalid-email') {
-                                  errorMessage = "Invalid email format";
-                                }
+                                      if (e.code == 'user-not-found') {
+                                        errorMessage =
+                                            "No user found with this email";
+                                      } else if (e.code == 'wrong-password') {
+                                        errorMessage = "Incorrect password";
+                                      } else if (e.code == 'invalid-email') {
+                                        errorMessage = "Invalid email format";
+                                      }
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(errorMessage)),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Something went wrong. Try again.")),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              backgroundColor: Colors.blue,
-                              minimumSize: const Size(double.infinity, 50),
-                              side: const BorderSide(
-                                  color: Colors.lightBlueAccent, width: 2),
-                            ),
-                            child: const Text(
-                              "Sign in",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
-                            ),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(content: Text(errorMessage)),
+                                      );
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                "Something went wrong. Try again.")),
+                                      );
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isEmailSigningIn = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                            isLoading: _isEmailSigningIn,
+                            text: "Sign in",
+                            backgroundColor: Colors.blue,
+                            borderColor: Colors.lightBlueAccent,
                           ),
                           TextButton(
                             onPressed: () {
@@ -301,46 +339,25 @@ class _LoginScreenState extends State<LoginScreen>
                             ],
                           ),
                           const SizedBox(height: 10),
-                          ElevatedButton(
+                          LoadingButton(
                             onPressed: _isGoogleSigningIn
                                 ? null
-                                : () => _signInWithGoogle(context),
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              backgroundColor: Colors.lightGreen,
-                              minimumSize: const Size(double.infinity, 50),
-                              side: const BorderSide(
-                                color: Colors.greenAccent,
-                                width: 2,
-                              ),
+                                : () async {
+                                    bool hasInternet =
+                                        await checkInternetConnection(context);
+                                    if (!hasInternet) return;
+
+                                    _signInWithGoogle(context);
+                                  },
+                            isLoading: _isGoogleSigningIn,
+                            text: "Continue with Google",
+                            backgroundColor: Colors.lightGreen,
+                            borderColor: Colors.greenAccent,
+                            leadingIcon: Image.asset(
+                              'assets/google_logo.png',
+                              height: 30,
+                              width: 30,
                             ),
-                            child: _isGoogleSigningIn
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 3,
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/google_logo.png',
-                                        height: 30,
-                                        width: 30,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      const Text(
-                                        "Continue with Google",
-                                        style: TextStyle(
-                                            color: Colors.white, fontSize: 18),
-                                      ),
-                                    ],
-                                  ),
                           ),
                           const SizedBox(height: 5),
                           TextButton(

@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/checkinternet_service.dart';
+import '../widgets/loading_button.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -60,23 +62,52 @@ class _SignupScreenState extends State<SignupScreen>
     super.dispose();
   }
 
+  bool _isGoogleSigningIn = false;
+  bool _isRegistering = false;
+
   void _signInWithGoogle(BuildContext context) async {
-    final UserCredential? userCredential =
-        await _authService.signInWithGoogle();
+    try {
+      setState(() {
+        _isGoogleSigningIn = true;
+      });
 
-    if (userCredential?.user != null) {
-      final user = userCredential!.user!;
+      final UserCredential? userCredential =
+          await _authService.signInWithGoogle();
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(
-            userId: user.uid,
-            userEmail: user.email!,
-            userName: user.displayName ?? 'User',
+      if (userCredential?.user != null) {
+        final user = userCredential!.user!;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(
+              userId: user.uid,
+              userEmail: user.email ?? '',
+              userName: user.displayName ?? 'User',
+            ),
           ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Google sign-in cancelled."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Sign-in failed: $e"),
+          backgroundColor: Colors.redAccent,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleSigningIn = false;
+        });
+      }
     }
   }
 
@@ -258,61 +289,78 @@ class _SignupScreenState extends State<SignupScreen>
                               ),
                             ),
                           const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: () async {
-                              String email = _emailController.text.trim();
-                              String password = _passwordController.text.trim();
+                          LoadingButton(
+                            onPressed: _isRegistering
+                                ? null
+                                : () async {
+                                    bool hasInternet =
+                                        await checkInternetConnection(context);
+                                    if (!hasInternet) return;
+                                    String email = _emailController.text.trim();
+                                    String password =
+                                        _passwordController.text.trim();
 
-                              if (email.isEmpty || password.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text("Please fill in all fields")),
-                                );
-                                return;
-                              }
+                                    if (email.isEmpty || password.isEmpty) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                "Please fill in all fields")),
+                                      );
+                                      return;
+                                    }
 
-                              final user = await _authService.registerWithEmail(
-                                  email, password);
+                                    setState(() {
+                                      _isRegistering = true;
+                                    });
 
-                              if (user != null) {
-                                await user
-                                    .sendEmailVerification(); // Send verification email
+                                    try {
+                                      final user = await _authService
+                                          .registerWithEmail(email, password);
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Verification email sent! Please verify before logging in.")),
-                                );
+                                      if (user != null) {
+                                        await user.sendEmailVerification();
 
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const LoginScreen()),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Registration failed! Try again.")),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              backgroundColor: Colors.blue,
-                              minimumSize: const Size(double.infinity, 50),
-                              side: const BorderSide(
-                                  color: Colors.lightBlueAccent, width: 2),
-                            ),
-                            child: const Text(
-                              "Register",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
-                            ),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  "Verification email sent! Please verify before logging in.")),
+                                        );
+
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const LoginScreen()),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  "Registration failed! Try again.")),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                "Something went wrong. Try again.")),
+                                      );
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isRegistering = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                            isLoading: _isRegistering,
+                            text: "Register",
+                            backgroundColor: Colors.blue,
+                            borderColor: Colors.lightBlueAccent,
                           ),
                           const SizedBox(height: 10),
                           const Row(
@@ -327,34 +375,24 @@ class _SignupScreenState extends State<SignupScreen>
                             ],
                           ),
                           const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: () => _signInWithGoogle(context),
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              backgroundColor: Colors.lightGreen,
-                              minimumSize: const Size(double.infinity, 50),
-                              side: const BorderSide(
-                                color: Colors.greenAccent,
-                                width: 2,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/google_logo.png',
-                                  height: 30,
-                                  width: 30,
-                                ),
-                                const SizedBox(width: 10),
-                                const Text(
-                                  "Continue with Google",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 18),
-                                ),
-                              ],
+                          LoadingButton(
+                            onPressed: _isGoogleSigningIn
+                                ? null
+                                : () async {
+                                    bool hasInternet =
+                                        await checkInternetConnection(context);
+                                    if (!hasInternet) return;
+
+                                    _signInWithGoogle(context);
+                                  },
+                            isLoading: _isGoogleSigningIn,
+                            text: "Continue with Google",
+                            backgroundColor: Colors.lightGreen,
+                            borderColor: Colors.greenAccent,
+                            leadingIcon: Image.asset(
+                              'assets/google_logo.png',
+                              height: 30,
+                              width: 30,
                             ),
                           ),
                           const SizedBox(height: 5),

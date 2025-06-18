@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:ai_wallpaper/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:in_app_update/in_app_update.dart';
 
+import '../services/checkinternet_service.dart';
 import 'home_screen.dart'; // Add this import
 
 class SplashScreen extends StatefulWidget {
@@ -50,6 +52,37 @@ class _SplashScreenState extends State<SplashScreen>
 
     _startLoadingProgress();
 
+    _checkInternetAndProceed();
+  }
+
+  Future<void> _checkInternetAndProceed() async {
+    bool isConnected = await checkInternetConnection(context);
+    if (isConnected) {
+      _checkForUpdate();
+    } else {
+      // Optional: you might want to handle offline case here too
+      _proceedAfterSplash();
+    }
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      final updateInfo = await InAppUpdate.checkForUpdate();
+
+      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
+        await InAppUpdate.performImmediateUpdate();
+      } else {
+        // If no update available, proceed to check auth state
+        _proceedAfterSplash();
+      }
+    } catch (e) {
+      // If update check fails (network issue etc), still proceed to auth check
+      debugPrint("Update check failed: $e");
+      _proceedAfterSplash();
+    }
+  }
+
+  void _proceedAfterSplash() {
     // Delay for 3 seconds, then check authentication state
     Timer(
       const Duration(seconds: 3),
