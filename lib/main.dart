@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/push_notification_service.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -19,6 +20,8 @@ void main() async {
   await Firebase.initializeApp();
 
   await dotenv.load(fileName: ".env");
+
+  await PushNotificationService.initialize(); // ✅ only once here
 
   runApp(const MyApp());
 }

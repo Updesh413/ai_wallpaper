@@ -48,7 +48,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
   Future<void> _getAppVersion() async {
     final info = await PackageInfo.fromPlatform();
     setState(() {
-      _appVersion = '${info.version} (${info.buildNumber})';
+      _appVersion = '${info.version}';
     });
   }
 
@@ -239,7 +239,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              'Version $_appVersion',
+              '   Version $_appVersion',
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),

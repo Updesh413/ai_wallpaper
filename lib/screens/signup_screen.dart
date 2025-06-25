@@ -320,34 +320,23 @@ class _SignupScreenState extends State<SignupScreen>
 
                                       if (user != null) {
                                         await user.sendEmailVerification();
-
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           const SnackBar(
                                               content: Text(
                                                   "Verification email sent! Please verify before logging in.")),
                                         );
-
                                         Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
                                               builder: (context) =>
                                                   const LoginScreen()),
                                         );
-                                      } else {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                              content: Text(
-                                                  "Registration failed! Try again.")),
-                                        );
                                       }
                                     } catch (e) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                "Something went wrong. Try again.")),
+                                        SnackBar(content: Text(e.toString())),
                                       );
                                     } finally {
                                       if (mounted) {

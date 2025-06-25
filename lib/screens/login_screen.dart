@@ -252,7 +252,6 @@ class _LoginScreenState extends State<LoginScreen>
                                       if (user != null) {
                                         await user.reload();
                                         bool isVerified = user.emailVerified;
-                                        print("Email Verified: $isVerified");
 
                                         if (isVerified) {
                                           Navigator.pushReplacement(
@@ -271,34 +270,15 @@ class _LoginScreenState extends State<LoginScreen>
                                               .showSnackBar(
                                             const SnackBar(
                                                 content: Text(
-                                                    "Please verify your email before logging in")),
+                                                    "Please verify your email before logging in.")),
                                           );
                                           await FirebaseAuth.instance.signOut();
                                         }
                                       }
-                                    } on FirebaseAuthException catch (e) {
-                                      String errorMessage =
-                                          "Invalid email or password";
-
-                                      if (e.code == 'user-not-found') {
-                                        errorMessage =
-                                            "No user found with this email";
-                                      } else if (e.code == 'wrong-password') {
-                                        errorMessage = "Incorrect password";
-                                      } else if (e.code == 'invalid-email') {
-                                        errorMessage = "Invalid email format";
-                                      }
-
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(content: Text(errorMessage)),
-                                      );
                                     } catch (e) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                "Something went wrong. Try again.")),
+                                        SnackBar(content: Text(e.toString())),
                                       );
                                     } finally {
                                       if (mounted) {

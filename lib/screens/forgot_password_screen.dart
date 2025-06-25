@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
+
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -14,6 +16,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   late Animation<double> _fadeInAnimation;
   late Animation<Offset> _slideAnimation;
   final TextEditingController _emailController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -53,19 +56,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       return;
     }
 
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    String? error = await _authService.sendPasswordResetEmail(email);
+    if (error == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Password reset link sent to your email")),
+        const SnackBar(
+            content: Text(
+                "If an account exists for this email, a reset link has been sent.")),
       );
       Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      String error = "Something went wrong.";
-      if (e.code == 'user-not-found') {
-        error = "No user found with this email";
-      } else if (e.code == 'invalid-email') {
-        error = "Invalid email format";
-      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error)),
       );

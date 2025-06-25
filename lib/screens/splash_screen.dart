@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:ai_wallpaper/screens/login_screen.dart';
 import 'package:ai_wallpaper/screens/biometric_auth_screen.dart'; // Add this import
 import 'package:firebase_auth/firebase_auth.dart'; // Add this import
+// import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:ai_wallpaper/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,6 +55,26 @@ class _SplashScreenState extends State<SplashScreen>
 
     _checkInternetAndProceed();
   }
+
+  // void getFCMToken() async {
+  //   String? token = await FirebaseMessaging.instance.getToken();
+  //   print("🔐 Device FCM Token: $token");
+
+  //   // Optionally show in a dialog for easy copy
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => AlertDialog(
+  //       title: const Text("Device FCM Token"),
+  //       content: SelectableText(token ?? "No token found"),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text("Close"),
+  //         )
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Future<void> _checkInternetAndProceed() async {
     bool isConnected = await checkInternetConnection(context);
@@ -306,6 +327,10 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                     ),
                   ),
+                  // ElevatedButton(
+                  //   onPressed: getFCMToken,
+                  //   child: const Text("Get FCM Token"),
+                  // )
                 ],
               ),
             ),
