@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "673586780607-q8u81g9i6r3k1qdne3hgqgrh0cer570s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Updesh.AIWallpaper",
+            "certificate_hash": "a798e28f086beea1be40840fd3aadd65d7588a7c"
+          }
+        },
+        {
           "client_id": "673586780607-ttikvl0et8j8hoqer6stqqjtv16jt37m.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/wallpaper.dart';
 import '../services/biometric_service.dart';
 import '../services/pexels_service.dart';
 import '../widgets/custom_scaffold.dart';
@@ -29,7 +31,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final PexelsService _pexelsService = PexelsService();
-  List<String> wallpapers = [];
+  List<Wallpaper> wallpapers = [];
+
   bool isLoading = false;
   int page = 1;
   final ScrollController _scrollController = ScrollController();
@@ -149,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final fetchedWallpapers = await _pexelsService.fetchWallpapers(
         randomQuery,
         page,
-      );
+      ) as List<Wallpaper>;
       setState(() {
         wallpapers.addAll(fetchedWallpapers.toSet().toList());
         page++;
@@ -276,27 +279,77 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (index >= wallpapers.length) {
                         return _buildShimmerEffect();
                       }
+                      final wallpaper = wallpapers[index];
+
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => WallpaperViewScreen(
-                                imageUrl: wallpapers[index],
+                                imageUrl: wallpaper.imageUrl,
                               ),
                             ),
                           );
                         },
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: wallpapers[index],
-                            fit: BoxFit.cover,
+                          child: Stack(
+                            children: [
+                              CachedNetworkImage(
+                                imageUrl: wallpaper.imageUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  color: Colors.black54,
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      final url = wallpaper.photographerUrl;
+                                      if (await canLaunchUrl(Uri.parse(url))) {
+                                        await launchUrl(Uri.parse(url),
+                                            mode:
+                                                LaunchMode.externalApplication);
+                                      }
+                                    },
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 10,
+                                          backgroundImage: NetworkImage(
+                                            'https://ui-avatars.com/api/?name=${Uri.encodeComponent(wallpaper.photographerName)}&background=random',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            wallpaper.photographerName,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       );
-                    },
-                  ),
+                    }),
           ),
         ],
       ),

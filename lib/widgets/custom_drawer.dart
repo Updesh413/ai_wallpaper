@@ -243,6 +243,31 @@ class _CustomDrawerState extends State<CustomDrawer> {
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),
+          Divider(),
+          ListTile(
+            leading: Icon(Icons.photo_library, color: Colors.teal),
+            title: Text(
+              'Wallpapers provided by Pexels',
+              style: TextStyle(fontSize: 14),
+            ),
+            onTap: () {
+              // Optionally open Pexels website on tap
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Credits'),
+                  content: Text(
+                      'Images and wallpapers in this app are powered by Pexels (https://www.pexels.com).'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
