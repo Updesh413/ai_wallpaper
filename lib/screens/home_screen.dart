@@ -142,8 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (isLoading) return;
     setState(() {
       isLoading = true;
-      if (page == 1)
+      if (page == 1) {
         wallpapers.clear(); // Clear wallpapers only when category changes
+      }
     });
 
     try {
@@ -152,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final fetchedWallpapers = await _pexelsService.fetchWallpapers(
         randomQuery,
         page,
-      ) as List<Wallpaper>;
+      );
       setState(() {
         wallpapers.addAll(fetchedWallpapers.toSet().toList());
         page++;

@@ -4,12 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../screens/login_screen.dart';
 import '../screens/settings_screen.dart'; // Import the SettingsScreen
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
-import 'package:lottie/lottie.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class CustomDrawer extends StatefulWidget {
@@ -48,7 +47,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
   Future<void> _getAppVersion() async {
     final info = await PackageInfo.fromPlatform();
     setState(() {
-      _appVersion = '${info.version}';
+      _appVersion = info.version;
     });
   }
 
@@ -150,7 +149,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   : (FirebaseAuth.instance.currentUser?.photoURL != null
                           ? NetworkImage(FirebaseAuth
                               .instance.currentUser!.photoURL!) // Google login
-                          : AssetImage('assets/default_avatar.png'))
+                          : const AssetImage('assets/default_avatar.png'))
                       as ImageProvider, // Default image
             ),
           ),
@@ -220,8 +219,18 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
           ),
           ListTile(
-            leading: Icon(Icons.logout),
-            title: Text('Logout'),
+            leading: const Icon(Icons.feedback_outlined),
+            title: const Text('Feedback'),
+            onTap: () async {
+              final Uri url = Uri.parse('https://play.google.com/store/apps/details?id=com.Updesh.AIWallpaper');
+              if (!await launchUrl(url)) {
+                throw Exception('Could not launch $url');
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
             onTap: () async {
               final authService = AuthService();
               await authService
@@ -231,7 +240,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => LoginScreen(),
+                  builder: (context) => const LoginScreen(),
                 ),
               );
             },
@@ -243,10 +252,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),
-          Divider(),
+          const Divider(),
           ListTile(
-            leading: Icon(Icons.photo_library, color: Colors.teal),
-            title: Text(
+            leading: const Icon(Icons.photo_library, color: Colors.teal),
+            title: const Text(
               'Wallpapers provided by Pexels',
               style: TextStyle(fontSize: 14),
             ),
@@ -255,13 +264,13 @@ class _CustomDrawerState extends State<CustomDrawer> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text('Credits'),
-                  content: Text(
+                  title: const Text('Credits'),
+                  content: const Text(
                       'Images and wallpapers in this app are powered by Pexels (https://www.pexels.com).'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Close'),
+                      child: const Text('Close'),
                     ),
                   ],
                 ),

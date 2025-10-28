@@ -254,7 +254,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.1),
                                   blurRadius: 20,
-                                  offset: Offset(0, 10),
+                                  offset: const Offset(0, 10),
                                 ),
                               ],
                             ),
@@ -269,13 +269,13 @@ class _SplashScreenState extends State<SplashScreen>
                       );
                     },
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
                       return FadeTransition(
                         opacity: _fadeAnimation,
-                        child: Column(
+                        child: const Column(
                           children: [
                             Text(
                               "AI Wallpaper",
@@ -300,7 +300,7 @@ class _SplashScreenState extends State<SplashScreen>
                       );
                     },
                   ),
-                  SizedBox(height: 48),
+                  const SizedBox(height: 48),
                   SizedBox(
                     width: 200,
                     child: Column(
@@ -310,16 +310,16 @@ class _SplashScreenState extends State<SplashScreen>
                           child: LinearProgressIndicator(
                             value: _loadingProgress,
                             backgroundColor: Colors.white.withOpacity(0.2),
-                            valueColor: AlwaysStoppedAnimation<Color>(
+                            valueColor: const AlwaysStoppedAnimation<Color>(
                               Colors.white,
                             ),
                             minHeight: 6,
                           ),
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
                           '${(_loadingProgress * 100).toInt()}%',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                           ),

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_wallpaper_manager/flutter_wallpaper_manager.dart';
@@ -54,118 +54,121 @@ class _WallpaperViewScreenState extends State<WallpaperViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Wallpaper'),
-        automaticallyImplyLeading: false,
-      ),
-      body: Column(
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
-          Expanded(
-            child: Center(
-              child: CachedNetworkImage(
-                imageUrl: widget.imageUrl,
-                fit: BoxFit.contain,
-                placeholder: (context, url) =>
-                    const CircularProgressIndicator(),
-                errorWidget: (context, url, error) => const Icon(Icons.error),
+          // Fullscreen Wallpaper
+          Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: widget.imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) =>
+                  const Center(child: CircularProgressIndicator()),
+              errorWidget: (context, url, error) =>
+                  const Center(child: Icon(Icons.error, color: Colors.white)),
+            ),
+          ),
+
+          // Top bar with back and title
+          SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+              child: Row(
+                children: [
+                  // Back button with dark circle background (no blur needed here)
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const CircleAvatar(
+                      backgroundColor: Colors.black54,
+                      child: Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Blurred "Wallpaper" title
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Wallpaper',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+
+          // Floating buttons at bottom
           if (_settingWallpaper)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24),
-            child: Column(
-              children: [
-                ElevatedButton(
-                  onPressed: _settingWallpaper
-                      ? null
-                      : () => _setWallpaper(context, widget.imageUrl,
+            const Center(child: CircularProgressIndicator())
+          else
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    bottom: 24.0, left: 24.0, right: 24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildActionButton(
+                      label: 'Set as Home Screen Wallpaper',
+                      onTap: () => _setWallpaper(context, widget.imageUrl,
                           WallpaperManager.HOME_SCREEN),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                    backgroundColor: Colors.green,
-                    side: const BorderSide(
-                      color: Colors.greenAccent,
-                      width: 2,
-                    ),
-                  ),
-                  child: const Text(
-                    'Set as Home Screen Wallpaper',
-                    style: TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _settingWallpaper
-                      ? null
-                      : () => _setWallpaper(context, widget.imageUrl,
+                    const SizedBox(height: 8),
+                    _buildActionButton(
+                      label: 'Set as Lock Screen Wallpaper',
+                      onTap: () => _setWallpaper(context, widget.imageUrl,
                           WallpaperManager.LOCK_SCREEN),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                    backgroundColor: Colors.green,
-                    side: const BorderSide(
-                      color: Colors.greenAccent,
-                      width: 2,
-                    ),
-                  ),
-                  child: const Text(
-                    'Set as Lock Screen Wallpaper',
-                    style: TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _settingWallpaper
-                      ? null
-                      : () => _setWallpaper(context, widget.imageUrl,
+                    const SizedBox(height: 8),
+                    _buildActionButton(
+                      label: 'Set as Both Screen Wallpaper',
+                      onTap: () => _setWallpaper(context, widget.imageUrl,
                           WallpaperManager.BOTH_SCREEN),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                    backgroundColor: Colors.green,
-                    side: const BorderSide(
-                      color: Colors.greenAccent,
-                      width: 2,
-                    ),
-                  ),
-                  child: const Text(
-                    'Set as Both Screen Wallpaper',
-                    style: TextStyle(color: Colors.white, fontSize: 15),
-                  ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed:
-                      _settingWallpaper ? null : () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    backgroundColor: Colors.red,
-                    side: const BorderSide(
-                      color: Colors.redAccent,
-                      width: 2,
-                    ),
-                  ),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required VoidCallback onTap,
+    Color color = Colors.green,
+  }) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 15)),
     );
   }
 }

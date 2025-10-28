@@ -13,7 +13,7 @@ class SettingsScreen extends StatefulWidget {
   String userName;
   String? avatarBase64;
 
-  SettingsScreen({
+  SettingsScreen({super.key, 
     required this.userId,
     required this.userEmail,
     required this.userName,
@@ -130,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : (FirebaseAuth.instance.currentUser?.photoURL != null
                             ? NetworkImage(
                                 FirebaseAuth.instance.currentUser!.photoURL!)
-                            : AssetImage('assets/default_avatar.png'))
+                            : const AssetImage('assets/default_avatar.png'))
                         as ImageProvider,
                 child: _avatarBase64 == null &&
                         FirebaseAuth.instance.currentUser?.photoURL == null

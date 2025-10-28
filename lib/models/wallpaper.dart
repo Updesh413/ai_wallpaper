@@ -11,7 +11,7 @@ class Wallpaper {
 
   factory Wallpaper.fromJson(Map<String, dynamic> json) {
     return Wallpaper(
-      imageUrl: json['src']['large'],
+      imageUrl: json['src']['portrait'],
       photographerName: json['photographer'],
       photographerUrl: json['photographer_url'],
     );

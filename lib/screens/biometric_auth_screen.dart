@@ -59,7 +59,7 @@ class _BiometricAuthScreenState extends State<BiometricAuthScreen> {
     );
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
