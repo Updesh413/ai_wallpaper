@@ -16,14 +16,18 @@ void main() async {
   // Force portrait orientation
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp();
 
-  await dotenv.load(fileName: ".env");
+    await dotenv.load(fileName: ".env");
 
-  await PushNotificationService.initialize(); // ✅ only once here
-
-  runApp(const MyApp());
+    await PushNotificationService.initialize(); // ✅ only once here
+  } catch (e) {
+    debugPrint("Initialization failed: $e");
+  } finally {
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatelessWidget {
