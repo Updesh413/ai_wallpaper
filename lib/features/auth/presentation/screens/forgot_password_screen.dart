@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
-import '../services/auth_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -15,7 +15,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   late Animation<double> _fadeInAnimation;
   late Animation<Offset> _slideAnimation;
   final TextEditingController _emailController = TextEditingController();
-  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -42,6 +41,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -55,18 +55,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       return;
     }
 
-    String? error = await _authService.sendPasswordResetEmail(email);
-    if (error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                "If an account exists for this email, a reset link has been sent.")),
-      );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+    final authProvider = context.read<UserAuthProvider>();
+    String? error = await authProvider.sendPasswordResetEmail(email);
+
+    if (mounted) {
+      if (error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  "If an account exists for this email, a reset link has been sent.")),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
     }
   }
 

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 Future<bool> checkInternetConnection(BuildContext context) async {
   var connectivityResult = await Connectivity().checkConnectivity();
-  if (connectivityResult == ConnectivityResult.none) {
+  if (connectivityResult.contains(ConnectivityResult.none)) {
     // Show alert dialog
     if (context.mounted) {
       showDialog(

@@ -10,10 +10,10 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 class SettingsScreen extends StatefulWidget {
   final String userId;
   final String userEmail;
-  String userName;
-  String? avatarBase64;
+  final String userName;
+  final String? avatarBase64;
 
-  SettingsScreen({super.key, 
+  const SettingsScreen({super.key, 
     required this.userId,
     required this.userEmail,
     required this.userName,
@@ -86,13 +86,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('username_${currentUser.uid}', newUsername);
 
     // Notify the parent widget (CustomDrawer) to update the UI
-    Navigator.pop(context, {
-      'username': newUsername,
-      'avatar': _avatarBase64,
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('User details saved successfully')),
-    );
+    if (mounted) {
+      Navigator.pop(context, {
+        'username': newUsername,
+        'avatar': _avatarBase64,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User details saved successfully')),
+      );
+    }
   }
 
   Future<String> compressAndEncode(Uint8List bytes) async {

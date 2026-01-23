@@ -1,28 +1,25 @@
-import 'package:ai_wallpaper/screens/splash_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'injection_container.dart' as di;
+import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/wallpaper/presentation/providers/wallpaper_provider.dart';
+import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart';
 
 void main() async {
-  // Ensure Flutter bindings are initialized
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-
-  // Keep native splash screen up until custom splash screen is loaded
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-
-  // Force portrait orientation
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   try {
-    // Initialize Firebase
     await Firebase.initializeApp();
-
     await dotenv.load(fileName: ".env");
-
-    await PushNotificationService.initialize(); // ✅ only once here
+    await di.init(); // Initialize dependency injection
+    await PushNotificationService.initialize();
   } catch (e) {
     debugPrint("Initialization failed: $e");
   } finally {
@@ -35,12 +32,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Remove the native splash screen as soon as possible
     FlutterNativeSplash.remove();
 
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => di.sl<UserAuthProvider>()..checkCurrentUser()),
+        ChangeNotifierProvider(create: (_) => di.sl<WallpaperProvider>()),
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(),
+      ),
     );
   }
 }

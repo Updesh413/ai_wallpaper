@@ -1,11 +1,11 @@
-import 'package:ai_wallpaper/screens/signup_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/checkinternet_service.dart';
-import '../widgets/loading_button.dart';
-import 'home_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import '../../../../widgets/loading_button.dart';
+import '../../../../services/checkinternet_service.dart';
+import '../../../wallpaper/presentation/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +16,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
-  final AuthService _authService = AuthService();
   late AnimationController _controller;
   late Animation<double> _fadeInAnimation;
   late Animation<Offset> _slideAnimation;
@@ -49,60 +48,71 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  bool _isGoogleSigningIn = false;
-  bool _isEmailSigningIn = false;
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    bool hasInternet = await checkInternetConnection(context);
+    if (!hasInternet) return;
 
-  void _signInWithGoogle(BuildContext context) async {
-    try {
-      setState(() {
-        _isGoogleSigningIn = true;
-      });
+    final authProvider = context.read<UserAuthProvider>();
+    bool success = await authProvider.signInWithGoogle();
 
-      final UserCredential? userCredential =
-          await _authService.signInWithGoogle();
-
-      if (userCredential?.user != null) {
-        final user = userCredential!.user!;
-
-        Navigator.pushReplacement(
+    if (success && mounted) {
+       Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomeScreen(
-              userId: user.uid,
-              userEmail: user.email ?? '',
-              userName: user.displayName ?? 'User',
-            ),
+            builder: (context) => const HomeScreen(),
           ),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Google sign-in cancelled."),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } catch (e) {
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Sign-in failed: $e"),
+          content: Text(authProvider.errorMessage ?? "Sign-in failed"),
           backgroundColor: Colors.redAccent,
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGoogleSigningIn = false;
-        });
-      }
+    }
+  }
+
+  Future<void> _signInWithEmail(BuildContext context) async {
+    bool hasInternet = await checkInternetConnection(context);
+    if (!hasInternet) return;
+
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter email and password")),
+      );
+      return;
+    }
+
+    final authProvider = context.read<UserAuthProvider>();
+    bool success = await authProvider.signInWithEmail(email, password);
+
+    if (success && mounted) {
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+          ),
+        );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? "Sign-in failed")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<UserAuthProvider>();
+    final isLoading = authProvider.isLoading;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -220,75 +230,8 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           const SizedBox(height: 20),
                           LoadingButton(
-                            onPressed: _isEmailSigningIn
-                                ? null
-                                : () async {
-                                    bool hasInternet =
-                                        await checkInternetConnection(context);
-                                    if (!hasInternet) return;
-                                    String email = _emailController.text.trim();
-                                    String password =
-                                        _passwordController.text.trim();
-
-                                    if (email.isEmpty || password.isEmpty) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                "Please enter email and password")),
-                                      );
-                                      return;
-                                    }
-
-                                    setState(() {
-                                      _isEmailSigningIn = true;
-                                    });
-
-                                    try {
-                                      final userCredential = await _authService
-                                          .signInWithEmail(email, password);
-                                      final user = userCredential?.user;
-
-                                      if (user != null) {
-                                        await user.reload();
-                                        bool isVerified = user.emailVerified;
-
-                                        if (isVerified) {
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => HomeScreen(
-                                                userId: user.uid,
-                                                userEmail: user.email!,
-                                                userName:
-                                                    user.displayName ?? 'User',
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                                content: Text(
-                                                    "Please verify your email before logging in.")),
-                                          );
-                                          await FirebaseAuth.instance.signOut();
-                                        }
-                                      }
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(content: Text(e.toString())),
-                                      );
-                                    } finally {
-                                      if (mounted) {
-                                        setState(() {
-                                          _isEmailSigningIn = false;
-                                        });
-                                      }
-                                    }
-                                  },
-                            isLoading: _isEmailSigningIn,
+                            onPressed: isLoading ? null : () => _signInWithEmail(context),
+                            isLoading: isLoading, // Note: Loading state is shared in provider, might be granular if needed
                             text: "Sign in",
                             backgroundColor: Colors.blue,
                             borderColor: Colors.lightBlueAccent,
@@ -320,16 +263,8 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           const SizedBox(height: 10),
                           LoadingButton(
-                            onPressed: _isGoogleSigningIn
-                                ? null
-                                : () async {
-                                    bool hasInternet =
-                                        await checkInternetConnection(context);
-                                    if (!hasInternet) return;
-
-                                    _signInWithGoogle(context);
-                                  },
-                            isLoading: _isGoogleSigningIn,
+                            onPressed: isLoading ? null : () => _signInWithGoogle(context),
+                            isLoading: isLoading,
                             text: "Continue with Google",
                             backgroundColor: Colors.lightGreen,
                             borderColor: Colors.greenAccent,

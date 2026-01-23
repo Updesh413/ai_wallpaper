@@ -1,23 +1,25 @@
 import 'dart:convert';
-import 'package:ai_wallpaper/screens/home_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../screens/login_screen.dart';
-import '../screens/settings_screen.dart'; // Import the SettingsScreen
-import '../services/auth_service.dart';
-import '../services/biometric_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+import '../features/wallpaper/presentation/screens/home_screen.dart';
+import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/providers/auth_provider.dart';
+import '../screens/settings_screen.dart';
+import '../services/biometric_service.dart';
 
 class CustomDrawer extends StatefulWidget {
   final String userId;
   final String userEmail;
-  String userName;
+  final String userName;
   final String? photoURL;
 
-  CustomDrawer({
+  const CustomDrawer({
     super.key,
     required this.userId,
     required this.userEmail,
@@ -31,19 +33,20 @@ class CustomDrawer extends StatefulWidget {
 
 class _CustomDrawerState extends State<CustomDrawer> {
   String? _avatarBase64;
-  bool _biometricEnabled = false; // Track biometric state
-  late BiometricService _biometricService; // Biometric service instance
+  late String _userName;
+  bool _biometricEnabled = false;
+  late BiometricService _biometricService;
   String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
+    _userName = widget.userName;
     _loadUserData();
     _loadBiometricSetting();
     _getAppVersion();
   }
 
-  /// Load app version info
   Future<void> _getAppVersion() async {
     final info = await PackageInfo.fromPlatform();
     setState(() {
@@ -51,30 +54,30 @@ class _CustomDrawerState extends State<CustomDrawer> {
     });
   }
 
-  /// Load user data (avatar & username) from Firestore or local cache
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? cachedAvatar = prefs.getString('avatar_${widget.userId}');
     String? cachedUsername = prefs.getString('username_${widget.userId}');
 
     if (cachedAvatar != null && cachedUsername != null) {
-      setState(() {
-        _avatarBase64 = cachedAvatar;
-        widget.userName = cachedUsername;
-      });
+      if (mounted) {
+        setState(() {
+          _avatarBase64 = cachedAvatar;
+          _userName = cachedUsername;
+        });
+      }
     } else {
       DocumentSnapshot snapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
           .get();
 
-      if (snapshot.exists) {
+      if (snapshot.exists && mounted) {
         setState(() {
           _avatarBase64 = snapshot['avatar'];
-          widget.userName = snapshot['username']; // Update username
+          _userName = snapshot['username'];
         });
 
-        // Save to local cache
         await prefs.setString('avatar_${widget.userId}', snapshot['avatar']);
         await prefs.setString(
             'username_${widget.userId}', snapshot['username']);
@@ -82,47 +85,47 @@ class _CustomDrawerState extends State<CustomDrawer> {
     }
   }
 
-  /// Load biometric setting from SharedPreferences
   Future<void> _loadBiometricSetting() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _biometricService = BiometricService(prefs); // Initialize biometric service
-    setState(() {
-      _biometricEnabled = _biometricService.isBiometricEnabled();
-    });
+    _biometricService = BiometricService(prefs);
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = _biometricService.isBiometricEnabled();
+      });
+    }
   }
 
-  /// Toggle biometric authentication
   Future<void> _toggleBiometric(bool value) async {
-    print("Toggling biometric authentication: $value");
-
     if (await _biometricService.isBiometricSupported()) {
-      print("Biometric authentication is supported.");
       final authenticated = await _biometricService.authenticate();
       if (authenticated) {
-        print("Biometric authentication successful.");
         await _biometricService.enableBiometric(value);
-        setState(() {
-          _biometricEnabled = value;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Biometric authentication ${value ? 'enabled' : 'disabled'}')),
-        );
+        if (mounted) {
+          setState(() {
+            _biometricEnabled = value;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Biometric authentication ${value ? 'enabled' : 'disabled'}')),
+          );
+        }
       } else {
-        print("Biometric authentication failed.");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Authentication failed. Please try again.')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Authentication failed. Please try again.')),
+          );
+        }
       }
     } else {
-      print("Biometric authentication is not supported.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Biometric authentication is not supported on this device.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Biometric authentication is not supported on this device.')),
+        );
+      }
     }
   }
 
@@ -139,18 +142,18 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 fit: BoxFit.cover,
               ),
             ),
-            accountName: Text(widget.userName),
+            accountName: Text(_userName),
             accountEmail: Text(widget.userEmail),
             currentAccountPicture: CircleAvatar(
               radius: 40,
               backgroundImage: _avatarBase64 != null
                   ? MemoryImage(
-                      base64Decode(_avatarBase64!)) // Load from Firestore
+                      base64Decode(_avatarBase64!))
                   : (FirebaseAuth.instance.currentUser?.photoURL != null
                           ? NetworkImage(FirebaseAuth
-                              .instance.currentUser!.photoURL!) // Google login
+                              .instance.currentUser!.photoURL!)
                           : const AssetImage('assets/default_avatar.png'))
-                      as ImageProvider, // Default image
+                      as ImageProvider,
             ),
           ),
           ListTile(
@@ -159,52 +162,29 @@ class _CustomDrawerState extends State<CustomDrawer> {
             onTap: () => Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => HomeScreen(
-                  userId: widget.userId,
-                  userEmail: widget.userEmail,
-                  userName: widget.userName,
-                ),
+                builder: (context) => const HomeScreen(),
               ),
             ),
           ),
-          // Uncomment the following ListTile if you want to add a subscription feature
-          // ListTile(
-          //   leading: Icon(Icons.subscriptions_rounded),
-          //   title: const Text('Subscribe'),
-          //   trailing: Lottie.asset(
-          //     'assets/subscribe.json',
-          //     height: 45,
-          //     width: 45,
-          //     repeat: true,
-          //   ),
-          //   onTap: () {
-          //     // Handle subscription click here
-          //     ScaffoldMessenger.of(context).showSnackBar(
-          //       const SnackBar(content: Text('Subscribe tapped!')),
-          //     );
-          //   },
-          // ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
             onTap: () async {
-              // Navigate to SettingsScreen and wait for the result
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => SettingsScreen(
                     userId: widget.userId,
                     userEmail: widget.userEmail,
-                    userName: widget.userName,
+                    userName: _userName,
                     avatarBase64: _avatarBase64,
                   ),
                 ),
               );
 
-              // Update the UI with the new username and avatar
-              if (result != null) {
+              if (result != null && mounted) {
                 setState(() {
-                  widget.userName = result['username'];
+                  _userName = result['username'];
                   _avatarBase64 = result['avatar'];
                 });
               }
@@ -232,17 +212,19 @@ class _CustomDrawerState extends State<CustomDrawer> {
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: () async {
-              final authService = AuthService();
-              await authService
-                  .clearAuthState(); // Clear Firebase and Google auth state
+              await context.read<UserAuthProvider>().signOut();
+              
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear(); // Clear SharedPreferences
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(),
-                ),
-              );
+              await prefs.clear();
+              
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
+                );
+              }
             },
           ),
           Padding(
@@ -260,7 +242,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
               style: TextStyle(fontSize: 14),
             ),
             onTap: () {
-              // Optionally open Pexels website on tap
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(

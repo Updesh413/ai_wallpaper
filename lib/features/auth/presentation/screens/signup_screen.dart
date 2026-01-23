@@ -1,11 +1,10 @@
-import 'package:ai_wallpaper/screens/home_screen.dart';
-import 'package:ai_wallpaper/screens/login_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-import '../services/auth_service.dart';
-import '../services/checkinternet_service.dart';
-import '../widgets/loading_button.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'login_screen.dart';
+import '../../../../widgets/loading_button.dart';
+import '../../../../services/checkinternet_service.dart';
+import '../../../wallpaper/presentation/screens/home_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,7 +15,6 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen>
     with TickerProviderStateMixin {
-  final AuthService _authService = AuthService();
   late AnimationController _controller;
   late Animation<double> _fadeInAnimation;
   late Animation<Offset> _slideAnimation;
@@ -62,55 +60,6 @@ class _SignupScreenState extends State<SignupScreen>
     super.dispose();
   }
 
-  bool _isGoogleSigningIn = false;
-  bool _isRegistering = false;
-
-  void _signInWithGoogle(BuildContext context) async {
-    try {
-      setState(() {
-        _isGoogleSigningIn = true;
-      });
-
-      final UserCredential? userCredential =
-          await _authService.signInWithGoogle();
-
-      if (userCredential?.user != null) {
-        final user = userCredential!.user!;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(
-              userId: user.uid,
-              userEmail: user.email ?? '',
-              userName: user.displayName ?? 'User',
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Google sign-in cancelled."),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Sign-in failed: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGoogleSigningIn = false;
-        });
-      }
-    }
-  }
-
   void _validatePasswords() {
     setState(() {
       _passwordsMatch =
@@ -118,8 +67,88 @@ class _SignupScreenState extends State<SignupScreen>
     });
   }
 
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    bool hasInternet = await checkInternetConnection(context);
+    if (!hasInternet) return;
+
+    final authProvider = context.read<UserAuthProvider>();
+    bool success = await authProvider.signInWithGoogle();
+
+    if (success && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+          ),
+        );
+    } else if (mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? "Sign-in failed"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+    }
+  }
+
+  Future<void> _register(BuildContext context) async {
+    bool hasInternet = await checkInternetConnection(context);
+    if (!hasInternet) return;
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+            content: Text(
+                "Please fill in all fields")),
+      );
+      return;
+    }
+
+    if (!_passwordsMatch) {
+       ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+            content: Text(
+                "Passwords do not match")),
+      );
+       return;
+    }
+
+    final authProvider = context.read<UserAuthProvider>();
+    bool success = await authProvider.signUp(email, password);
+
+    if (success && mounted) {
+        // Ideally send verification email inside provider logic or here if user object returned
+        // For now, assuming success leads to auto login or back to login
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+          const SnackBar(
+              content: Text(
+                  "Account created! Please login.")),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  const LoginScreen()),
+        );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? "Registration failed")),
+      );
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<UserAuthProvider>();
+    final isLoading = authProvider.isLoading;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -290,63 +319,8 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                           const SizedBox(height: 10),
                           LoadingButton(
-                            onPressed: _isRegistering
-                                ? null
-                                : () async {
-                                    bool hasInternet =
-                                        await checkInternetConnection(context);
-                                    if (!hasInternet) return;
-                                    String email = _emailController.text.trim();
-                                    String password =
-                                        _passwordController.text.trim();
-
-                                    if (email.isEmpty || password.isEmpty) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                "Please fill in all fields")),
-                                      );
-                                      return;
-                                    }
-
-                                    setState(() {
-                                      _isRegistering = true;
-                                    });
-
-                                    try {
-                                      final user = await _authService
-                                          .registerWithEmail(email, password);
-
-                                      if (user != null) {
-                                        await user.sendEmailVerification();
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                              content: Text(
-                                                  "Verification email sent! Please verify before logging in.")),
-                                        );
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const LoginScreen()),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(content: Text(e.toString())),
-                                      );
-                                    } finally {
-                                      if (mounted) {
-                                        setState(() {
-                                          _isRegistering = false;
-                                        });
-                                      }
-                                    }
-                                  },
-                            isLoading: _isRegistering,
+                            onPressed: isLoading ? null : () => _register(context),
+                            isLoading: isLoading,
                             text: "Register",
                             backgroundColor: Colors.blue,
                             borderColor: Colors.lightBlueAccent,
@@ -365,16 +339,8 @@ class _SignupScreenState extends State<SignupScreen>
                           ),
                           const SizedBox(height: 10),
                           LoadingButton(
-                            onPressed: _isGoogleSigningIn
-                                ? null
-                                : () async {
-                                    bool hasInternet =
-                                        await checkInternetConnection(context);
-                                    if (!hasInternet) return;
-
-                                    _signInWithGoogle(context);
-                                  },
-                            isLoading: _isGoogleSigningIn,
+                            onPressed: isLoading ? null : () => _signInWithGoogle(context),
+                            isLoading: isLoading,
                             text: "Continue with Google",
                             backgroundColor: Colors.lightGreen,
                             borderColor: Colors.greenAccent,

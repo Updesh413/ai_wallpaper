@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';
+import 'package:provider/provider.dart';
+import '../../../../features/wallpaper/presentation/screens/home_screen.dart';
 import 'login_screen.dart';
+import '../providers/auth_provider.dart';
 
 class BiometricAuthScreen extends StatefulWidget {
-  final User user;
-
-  const BiometricAuthScreen({super.key, required this.user});
+  const BiometricAuthScreen({super.key});
 
   @override
   _BiometricAuthScreenState createState() => _BiometricAuthScreenState();
@@ -32,24 +31,22 @@ class _BiometricAuthScreenState extends State<BiometricAuthScreen> {
       );
 
       if (authenticated) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(
-              userId: widget.user.uid,
-              userEmail: widget.user.email!,
-              userName: widget.user.displayName ?? 'User',
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
             ),
-          ),
-        );
+          );
+        }
       } else {
-        _handleAuthFailure();
+        if (mounted) _handleAuthFailure();
       }
     } catch (e) {
       print("Biometric authentication error: $e");
-      _handleAuthFailure();
+      if (mounted) _handleAuthFailure();
     }
-    setState(() => _isAuthenticating = false);
+    if (mounted) setState(() => _isAuthenticating = false);
   }
 
   void _handleAuthFailure() {
@@ -57,6 +54,9 @@ class _BiometricAuthScreenState extends State<BiometricAuthScreen> {
       const SnackBar(
           content: Text('Authentication failed. Please log in again.')),
     );
+    // Sign out to ensure clean state
+    context.read<UserAuthProvider>().signOut();
+    
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -71,6 +71,7 @@ class _BiometricAuthScreenState extends State<BiometricAuthScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (_isAuthenticating) const CircularProgressIndicator(),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _authenticate,
               child: const Text('Try Again'),
