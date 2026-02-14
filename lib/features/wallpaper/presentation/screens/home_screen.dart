@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../domain/entities/wallpaper.dart';
 import '../providers/wallpaper_provider.dart';
@@ -12,6 +13,7 @@ import 'wallpaper_view_screen.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../widgets/custom_scaffold.dart';
 import '../../../../services/biometric_service.dart';
+import '../../../../core/utils/ad_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   // We can remove these params and use AuthProvider, but to keep CustomScaffold happy for now
@@ -31,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int page = 1;
   final ScrollController _scrollController = ScrollController();
   bool _biometricEnabled = false;
+  BannerAd? _bannerAd;
+  bool _isBannerAdReady = false;
 
   List<String> categories = [
     'All',
@@ -55,6 +59,29 @@ class _HomeScreenState extends State<HomeScreen> {
     
     _scrollController.addListener(_scrollListener);
     _loadBiometricSetting();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: AdHelper.bannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          setState(() {
+            _isBannerAdReady = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          debugPrint('Failed to load a banner ad: ${err.message}');
+          _isBannerAdReady = false;
+          ad.dispose();
+        },
+      ),
+    );
+
+    _bannerAd?.load();
   }
 
   Future<void> _loadBiometricSetting() async {
@@ -154,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -328,6 +356,16 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
+          // Banner Ad
+          if (_isBannerAdReady)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                width: _bannerAd!.size.width.toDouble(),
+                height: _bannerAd!.size.height.toDouble(),
+                child: AdWidget(ad: _bannerAd!),
+              ),
+            ),
         ],
       ),
     );

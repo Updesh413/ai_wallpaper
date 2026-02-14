@@ -1,1 +1,36 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ai-wallpaper-beb91","appId":"1:673586780607:android:f9fa54eef687b11365290a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ai-wallpaper-beb91","configurations":{"android":"1:673586780607:android:f9fa54eef687b11365290a","ios":"1:673586780607:ios:02ec17ca78ae83fc65290a"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ai-wallpaper-beb91",
+          "appId": "1:673586780607:android:f9fa54eef687b11365290a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ai-wallpaper-beb91",
+          "configurations": {
+            "android": "1:673586780607:android:f9fa54eef687b11365290a",
+            "ios": "1:673586780607:ios:02ec17ca78ae83fc65290a"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

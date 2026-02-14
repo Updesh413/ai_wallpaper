@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'injection_container.dart' as di;
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/wallpaper/presentation/providers/wallpaper_provider.dart';
@@ -18,6 +19,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
     await dotenv.load(fileName: ".env");
+    await MobileAds.instance.initialize();
     await di.init(); // Initialize dependency injection
     await PushNotificationService.initialize();
   } catch (e) {
