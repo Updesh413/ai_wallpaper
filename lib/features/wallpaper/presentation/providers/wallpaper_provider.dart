@@ -7,7 +7,7 @@ class WallpaperProvider with ChangeNotifier {
 
   WallpaperProvider({required this.getWallpapersUseCase});
 
-  List<WallpaperEntity> _wallpapers = [];
+  final List<WallpaperEntity> _wallpapers = [];
   bool _isLoading = false;
   String? _errorMessage;
 

@@ -8,8 +8,10 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'injection_container.dart' as di;
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/wallpaper/presentation/providers/wallpaper_provider.dart';
+import 'services/favorites_service.dart';
 import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -40,10 +42,15 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => di.sl<UserAuthProvider>()..checkCurrentUser()),
         ChangeNotifierProvider(create: (_) => di.sl<WallpaperProvider>()),
+        ChangeNotifierProvider(create: (_) => di.sl<FavoritesService>()),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: SplashScreen(),
+        title: 'AI Wallpaper',
+        themeMode: ThemeMode.system,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        home: const SplashScreen(),
       ),
     );
   }

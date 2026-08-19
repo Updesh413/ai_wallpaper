@@ -18,9 +18,13 @@ import 'features/auth/domain/usecases/logout_user.dart';
 import 'features/auth/domain/usecases/check_auth_status.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 
+import 'services/favorites_service.dart';
+
 final sl = GetIt.instance;
 
 Future<void> init() async {
+  //! Services
+  sl.registerLazySingleton(() => FavoritesService());
   //! Features - Wallpaper
   // Provider
   sl.registerFactory(

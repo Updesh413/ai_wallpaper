@@ -9,6 +9,7 @@ import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/providers/auth_provider.dart';
 import '../features/wallpaper/presentation/screens/home_screen.dart';
 import '../services/checkinternet_service.dart';
+import '../services/favorites_service.dart';
 import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -58,6 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkInternetAndProceed() async {
     bool isConnected = await checkInternetConnection(context);
+    if (!mounted) return;
     if (isConnected) {
       _checkForUpdate();
     } else {
@@ -84,62 +86,50 @@ class _SplashScreenState extends State<SplashScreen>
     Timer(
       const Duration(seconds: 3),
       () async {
-        if (mounted) {
-          final authProvider = context.read<UserAuthProvider>();
-          // Ensure we have the latest status
-          await authProvider.checkCurrentUser();
-          final user = authProvider.user;
-          
-          final prefs = await SharedPreferences.getInstance();
-          final biometricEnabled = prefs.getBool('biometricEnabled') ?? false;
+        if (!mounted) return;
+        final authProvider = context.read<UserAuthProvider>();
+        // Ensure we have the latest status
+        await authProvider.checkCurrentUser();
+        if (!mounted) return;
+        final user = authProvider.user;
+        
+        final prefs = await SharedPreferences.getInstance();
+        final biometricEnabled = prefs.getBool('biometricEnabled') ?? false;
 
-          if (user == null) {
+        if (!mounted) return;
+
+        if (user == null) {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, a1, a2) => const LoginScreen(),
+              transitionsBuilder: (context, a1, a2, child) =>
+                  FadeTransition(opacity: a1, child: child),
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        } else {
+          context.read<FavoritesService>().initForCurrentUser(user.uid);
+          if (biometricEnabled) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (context) => const LoginScreen(),
+              PageRouteBuilder(
+                pageBuilder: (context, a1, a2) => const BiometricAuthScreen(),
+                transitionsBuilder: (context, a1, a2, child) =>
+                    FadeTransition(opacity: a1, child: child),
+                transitionDuration: const Duration(milliseconds: 500),
               ),
             );
           } else {
-            // Check if biometric is enabled
-            if (biometricEnabled) {
-              // We need to pass the firebase user to biometric screen usually
-              // But here we might just pass the user entity or handle it there.
-              // The original BiometricAuthScreen expected a User object.
-              // I'll need to check BiometricAuthScreen.
-              // Since AuthProvider returns UserEntity which might wrap Firebase User or just data.
-              // If BiometricAuthScreen needs `User` object specifically, we might need to adjust.
-              // Let's assume for now we navigate to BiometricAuthScreen and it handles its thing.
-              // I will check BiometricAuthScreen in a moment.
-              
-              // HACK: for now, using FirebaseAuth instance directly for compatibility with legacy BiometricScreen
-              // or refactor BiometricScreen to use UserEntity.
-              // Since I haven't refactored BiometricScreen fully, I'll rely on it receiving what it expects.
-              // The old code passed `user` (FirebaseAuth User).
-              // My UserEntity is a wrapper.
-              // Let's import FirebaseAuth here just to pass the object if needed, OR refactor BiometricScreen.
-              // Better: Refactor BiometricScreen to not need the User object or accept UserEntity.
-              
-              // For now, I'll direct to HomeScreen if bio is weird, or Login.
-              // Actually, let's fix BiometricScreen import.
-              
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  // I'll need to check what BiometricAuthScreen expects.
-                  // Assuming I'll update it or it expects something I can provide.
-                  // Old code: BiometricAuthScreen(user: user)
-                  builder: (context) => const BiometricAuthScreen(), 
-                ),
-              );
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const HomeScreen(),
-                ),
-              );
-            }
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, a1, a2) => const HomeScreen(),
+                transitionsBuilder: (context, a1, a2, child) =>
+                    FadeTransition(opacity: a1, child: child),
+                transitionDuration: const Duration(milliseconds: 500),
+              ),
+            );
           }
         }
       },
@@ -191,7 +181,7 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -203,7 +193,7 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -226,16 +216,19 @@ class _SplashScreenState extends State<SplashScreen>
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 20,
                                   offset: const Offset(0, 10),
                                 ),
                               ],
                             ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/logo.png',
-                                fit: BoxFit.cover,
+                            child: Hero(
+                              tag: 'app_logo',
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/logo.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ),
@@ -283,7 +276,7 @@ class _SplashScreenState extends State<SplashScreen>
                           borderRadius: BorderRadius.circular(10),
                           child: LinearProgressIndicator(
                             value: _loadingProgress,
-                            backgroundColor: Colors.white.withOpacity(0.2),
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Colors.white,
                             ),

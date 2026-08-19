@@ -1,0 +1,127 @@
+name: Deploy to Google Play Store
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Google Play Release Track'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: 'Release Status'
+        required: true
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
+          - inProgress
+          - halted
+      build_number:
+        description: 'Optional Custom Build Number Override (e.g. 13)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build_and_deploy:
+    name: Build Signed AAB & Deploy to Play Store
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
+
+      - name: Restore .env configuration
+        run: |
+          if [ -n "${{ secrets.ENV_FILE }}" ]; then
+            echo "${{ secrets.ENV_FILE }}" > .env
+          else
+            echo "Generating .env from repository secrets..."
+            echo "PEXELS_API=${{ secrets.PEXELS_API }}" >> .env
+            echo "FIREBASE_PROJECT_ID=ai-wallpaper-beb91" >> .env
+          fi
+
+      - name: Setup Android Keystore & key.properties
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+            echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
+            echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS || 'upload' }}" >> android/key.properties
+            echo "storeFile=../app/upload-keystore.jks" >> android/key.properties
+            echo "Android signing configured successfully from secrets."
+          else
+            echo "WARNING: ANDROID_KEYSTORE_BASE64 secret not found. Checking if local key.properties exists..."
+          fi
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test
+
+      - name: Build Android App Bundle (.aab)
+        run: |
+          if [ -n "${{ github.event.inputs.build_number }}" ]; then
+            echo "Building with custom build number: ${{ github.event.inputs.build_number }}"
+            flutter build appbundle --release --build-number=${{ github.event.inputs.build_number }}
+          else
+            echo "Building with pubspec.yaml version..."
+            flutter build appbundle --release
+          fi
+
+      - name: Upload AAB as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-${{ github.run_number }}.aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Deploy to Google Play Store
+        if: ${{ secrets.PLAY_STORE_JSON_KEY != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
+          packageName: com.Updesh.AIWallpaper
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ github.event.inputs.track || 'internal' }}
+          status: ${{ github.event.inputs.status || 'completed' }}
+          inAppUpdatePriority: 2
+
+      - name: Create GitHub Release (on Tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/app/outputs/bundle/release/app-release.aab
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

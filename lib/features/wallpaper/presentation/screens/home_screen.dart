@@ -4,39 +4,36 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../domain/entities/wallpaper.dart';
 import '../providers/wallpaper_provider.dart';
 import 'wallpaper_view_screen.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../../widgets/custom_scaffold.dart';
-import '../../../../services/biometric_service.dart';
+import '../../../../services/favorites_service.dart';
+import '../../../../screens/explore_tab_screen.dart';
+import '../../../../screens/favorites_tab_screen.dart';
+import '../../../../screens/profile_tab_screen.dart';
+import '../../../../widgets/glass/glass_bottom_nav_bar.dart';
+import '../../../../widgets/glass/glass_container.dart';
 import '../../../../core/utils/ad_helper.dart';
+import '../../../../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
-  // We can remove these params and use AuthProvider, but to keep CustomScaffold happy for now
-  // we might pass them, or better: retrieve from provider inside build.
-  // I will make them optional to allow migration or just ignore them if I can get from provider.
-  // Actually, for cleanest transition, let's keep the constructor signature compatible if possible
-  // or better, update calls to HomeScreen to not pass them.
-  // Since I am refactoring navigation in Splash/Login, I will remove them.
-
   const HomeScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int page = 1;
+  int _currentTabIndex = 0;
+  int _page = 1;
   final ScrollController _scrollController = ScrollController();
-  bool _biometricEnabled = false;
   BannerAd? _bannerAd;
   bool _isBannerAdReady = false;
 
-  List<String> categories = [
+  final List<String> _categories = [
     'All',
     'Nature',
     'Space',
@@ -45,20 +42,21 @@ class _HomeScreenState extends State<HomeScreen> {
     'Animals',
     'Cars',
     'City',
-    'Sports'
+    'Sports',
+    'Cyberpunk',
+    'Minimal',
   ];
-  String selectedCategory = 'All';
+  String _selectedCategory = 'All';
 
   @override
   void initState() {
     super.initState();
-    // Fetch random wallpapers on app launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchWallpapers();
+      context.read<FavoritesService>().initForCurrentUser();
     });
-    
+
     _scrollController.addListener(_scrollListener);
-    _loadBiometricSetting();
     _loadBannerAd();
   }
 
@@ -69,13 +67,19 @@ class _HomeScreenState extends State<HomeScreen> {
       size: AdSize.banner,
       listener: BannerAdListener(
         onAdLoaded: (_) {
-          setState(() {
-            _isBannerAdReady = true;
-          });
+          if (mounted) {
+            setState(() {
+              _isBannerAdReady = true;
+            });
+          }
         },
         onAdFailedToLoad: (ad, err) {
           debugPrint('Failed to load a banner ad: ${err.message}');
-          _isBannerAdReady = false;
+          if (mounted) {
+            setState(() {
+              _isBannerAdReady = false;
+            });
+          }
           ad.dispose();
         },
       ),
@@ -84,98 +88,54 @@ class _HomeScreenState extends State<HomeScreen> {
     _bannerAd?.load();
   }
 
-  Future<void> _loadBiometricSetting() async {
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool('biometricEnabled') ?? false;
-    setState(() => _biometricEnabled = enabled);
-
-    if (!enabled) {
-      Future.delayed(Duration.zero, () => _showBiometricPrompt());
-    }
-  }
-
-  void _showBiometricPrompt() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enable Biometric Login?'),
-        content: const Text(
-            'For faster and more secure logins, would you like to enable biometric authentication?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Not Now'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              final prefs = await SharedPreferences.getInstance();
-              final bioService = BiometricService(prefs);
-
-              if (await bioService.isBiometricSupported()) {
-                final authenticated = await bioService.authenticate();
-                if (authenticated) {
-                  await bioService.enableBiometric(true);
-                  setState(() => _biometricEnabled = true);
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Biometric enabled')),
-                    );
-                  }
-                }
-              } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Biometric not supported')),
-                  );
-                }
-              }
-            },
-            child: const Text('Enable'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _fetchWallpapers() {
-    final randomQuery = _getRandomQuery();
-    context.read<WallpaperProvider>().fetchWallpapers(randomQuery, page);
+    final query = _getQueryForCategory(_selectedCategory);
+    context.read<WallpaperProvider>().fetchWallpapers(query, _page);
     setState(() {
-      page++;
+      _page++;
     });
   }
 
-  String _getRandomQuery() {
-    final random = Random();
-    if (selectedCategory == 'All') {
+  String _getQueryForCategory(String category) {
+    if (category == 'All') {
+      final random = Random();
       final randomCategory =
-          categories[random.nextInt(categories.length - 1) + 1];
+          _categories[random.nextInt(_categories.length - 1) + 1];
       return randomCategory.toLowerCase();
     } else {
-      return selectedCategory.toLowerCase();
+      return category.toLowerCase();
     }
   }
 
   void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 100) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 150) {
       final provider = context.read<WallpaperProvider>();
       if (!provider.isLoading) {
-         _fetchWallpapers();
+        _fetchWallpapers();
       }
     }
   }
 
   void _changeCategory(String category) {
+    if (_selectedCategory == category) return;
     setState(() {
-      selectedCategory = category;
-      page = 1;
+      _selectedCategory = category;
+      _page = 1;
     });
-    _fetchWallpapers();
+    final query = _getQueryForCategory(category);
+    context.read<WallpaperProvider>().fetchWallpapers(query, 1);
+  }
+
+  void _selectCategoryFromExplore(String category) {
+    setState(() {
+      _currentTabIndex = 0;
+      _selectedCategory = category;
+      _page = 1;
+    });
+    final query = category.toLowerCase();
+    context.read<WallpaperProvider>().fetchWallpapers(query, 1);
   }
 
   @override
@@ -185,25 +145,181 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Widget _buildCategoryBar() {
+  Widget _buildTopAppBar(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+      child: Row(
+        children: [
+          // Frosted App Logo Badge
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: GlassContainer(
+              padding: const EdgeInsets.all(6),
+              borderRadius: 21,
+              blur: 16,
+              child: Hero(
+                tag: 'app_logo',
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/logo.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // App Title
+          Text(
+            "AI Wallpaper",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          const Spacer(),
+
+          // Subscribe / Premium Button
+          GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.workspace_premium_rounded, color: Colors.amberAccent, size: 20),
+                      SizedBox(width: 8),
+                      Text("Premium Plans Coming Soon!"),
+                    ],
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  backgroundColor: const Color(0xFF1E293B),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFFF9500).withValues(alpha: 0.18),
+                    const Color(0xFFFFCC00).withValues(alpha: 0.18),
+                  ],
+                ),
+                border: Border.all(
+                  color: const Color(0xFFFF9500).withValues(alpha: 0.4),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: Lottie.asset(
+                      'assets/subscribe.json',
+                      repeat: true,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'VIP',
+                    style: TextStyle(
+                      color: Color(0xFFFF9500),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryBar(bool isDark) {
     return SizedBox(
-      height: 50,
+      height: 42,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _categories.length,
         itemBuilder: (context, index) {
-          final category = categories[index];
+          final category = _categories[index];
+          final isSelected = _selectedCategory == category;
+
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: ChoiceChip(
-              label: Text(category),
-              selected: selectedCategory == category,
-              onSelected: (_) => _changeCategory(category),
-              selectedColor: Colors.blue,
-              backgroundColor: Colors.grey[300],
-              labelStyle: TextStyle(
-                color:
-                    selectedCategory == category ? Colors.white : Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: GestureDetector(
+              onTap: () => _changeCategory(category),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          colors: AppTheme.primaryGradient,
+                        )
+                      : null,
+                  color: isSelected
+                      ? null
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.white.withValues(alpha: 0.7)),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.transparent
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.white.withValues(alpha: 0.8)),
+                    width: 1.2,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    category,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF475569)),
+                    ),
+                  ),
+                ),
               ),
             ),
           );
@@ -212,160 +328,313 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildShimmerEffect() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: 6,
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
-          child: Container(
-            height: 150,
+  Widget _buildShimmerGrid(bool isDark) {
+    return Shimmer.fromColors(
+      baseColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+      highlightColor: isDark ? const Color(0xFF334155) : const Color(0xFFF8FAFC),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 170),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.65,
+        ),
+        itemCount: 6,
+        itemBuilder: (context, index) {
+          return Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(20),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildWallpaperCard(WallpaperEntity wallpaper, bool isDark) {
+    final favoritesService = context.watch<FavoritesService>();
+    final isFavorite = favoritesService.isFavorite(wallpaper.imageUrl);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, a1, a2) => WallpaperViewScreen(
+              imageUrl: wallpaper.imageUrl,
+              photographerName: wallpaper.photographerName,
+              photographerUrl: wallpaper.photographerUrl,
+            ),
+            transitionsBuilder: (context, a1, a2, child) =>
+                FadeTransition(opacity: a1, child: child),
+            transitionDuration: const Duration(milliseconds: 300),
           ),
         );
       },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.45)
+                  : Colors.black.withValues(alpha: 0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Cached Network Image
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: wallpaper.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.04),
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.04),
+                    child: const Icon(Icons.error_outline),
+                  ),
+                ),
+              ),
+
+              // Favorite Heart Button (Top Right)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => favoritesService.toggleFavorite(wallpaper),
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.45),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      size: 16,
+                      color: isFavorite ? const Color(0xFFFF2D55) : Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Photographer attribution badge (Bottom)
+              Positioned(
+                bottom: 8,
+                left: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () async {
+                    final url = wallpaper.photographerUrl;
+                    if (url.isNotEmpty && await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(Uri.parse(url),
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  child: GlassContainer(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    borderRadius: 14,
+                    blur: 14,
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 10,
+                          backgroundImage: NetworkImage(
+                            'https://ui-avatars.com/api/?name=${Uri.encodeComponent(wallpaper.photographerName)}&background=random',
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            wallpaper.photographerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWallpapersTab(bool isDark) {
+    return Column(
+      children: [
+        _buildTopAppBar(isDark),
+        _buildCategoryBar(isDark),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Consumer<WallpaperProvider>(
+            builder: (context, provider, child) {
+              final wallpapers = provider.wallpapers;
+              final isLoading = provider.isLoading;
+
+              if (wallpapers.isEmpty && isLoading) {
+                return _buildShimmerGrid(isDark);
+              }
+
+              if (wallpapers.isEmpty && provider.errorMessage != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Text(
+                        provider.errorMessage!,
+                        style: const TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _fetchWallpapers,
+                        child: const Text("Retry"),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  setState(() => _page = 1);
+                  _fetchWallpapers();
+                },
+                child: GridView.builder(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 170),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.65,
+                  ),
+                  itemCount: wallpapers.length + (isLoading ? 2 : 0),
+                  itemBuilder: (context, index) {
+                    if (index >= wallpapers.length) {
+                      return Shimmer.fromColors(
+                        baseColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                        highlightColor: isDark ? const Color(0xFF334155) : const Color(0xFFF8FAFC),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      );
+                    }
+                    final wallpaper = wallpapers[index];
+                    return _buildWallpaperCard(wallpaper, isDark);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<UserAuthProvider>();
-    final user = authProvider.user;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Fallback values if user is null (though normally shouldn't be here if not logged in)
-    final userId = user?.uid ?? 'guest';
-    final userEmail = user?.email ?? 'guest@example.com';
-    final userName = user?.displayName ?? 'Guest';
-
-    return CustomScaffold(
-      title: 'Wallpapers',
-      userId: userId,
-      userEmail: userEmail,
-      userName: userName,
-      body: Column(
+    return Scaffold(
+      extendBody: true,
+      body: IndexedStack(
+        index: _currentTabIndex,
         children: [
-          _buildCategoryBar(),
-          Expanded(
-            child: Consumer<WallpaperProvider>(
-              builder: (context, provider, child) {
-                final wallpapers = provider.wallpapers;
-                final isLoading = provider.isLoading;
-
-                if (wallpapers.isEmpty && isLoading) {
-                  return _buildShimmerEffect();
-                }
-
-                if (wallpapers.isEmpty && provider.errorMessage != null) {
-                   return Center(child: Text(provider.errorMessage!));
-                }
-
-                return GridView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(8.0),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemCount: wallpapers.length + (isLoading ? 2 : 0),
-                  itemBuilder: (context, index) {
-                    if (index >= wallpapers.length) {
-                      return _buildShimmerEffect();
-                    }
-                    final wallpaper = wallpapers[index];
-
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => WallpaperViewScreen(
-                              imageUrl: wallpaper.imageUrl,
-                            ),
-                          ),
-                        );
-                      },
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Stack(
-                          children: [
-                            CachedNetworkImage(
-                              imageUrl: wallpaper.imageUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                color: Colors.black54,
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    final url = wallpaper.photographerUrl;
-                                    if (await canLaunchUrl(Uri.parse(url))) {
-                                      await launchUrl(Uri.parse(url),
-                                          mode: LaunchMode.externalApplication);
-                                    }
-                                  },
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 10,
-                                        backgroundImage: NetworkImage(
-                                          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(wallpaper.photographerName)}&background=random',
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          wallpaper.photographerName,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            decoration: TextDecoration.underline,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+          SafeArea(
+            bottom: false,
+            child: _buildWallpapersTab(isDark),
           ),
-          // Banner Ad
-          if (_isBannerAdReady)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: SizedBox(
-                width: _bannerAd!.size.width.toDouble(),
-                height: _bannerAd!.size.height.toDouble(),
-                child: AdWidget(ad: _bannerAd!),
-              ),
+          ExploreTabScreen(
+            onSelectCategory: _selectCategoryFromExplore,
+          ),
+          FavoritesTabScreen(
+            onExplore: () => setState(() => _currentTabIndex = 0),
+          ),
+          const ProfileTabScreen(),
+        ],
+      ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Banner Ad displayed clearly above the floating bottom navigation bar
+          if (_isBannerAdReady && _bannerAd != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              alignment: Alignment.center,
+              width: _bannerAd!.size.width.toDouble(),
+              height: _bannerAd!.size.height.toDouble(),
+              child: AdWidget(ad: _bannerAd!),
             ),
+
+          GlassBottomNavBar(
+            currentIndex: _currentTabIndex,
+            onTap: (index) {
+              setState(() {
+                _currentTabIndex = index;
+              });
+            },
+            items: const [
+              GlassBottomNavBarItem(
+                icon: Icons.grid_view_rounded,
+                activeIcon: Icons.grid_view_rounded,
+                label: "Home",
+              ),
+              GlassBottomNavBarItem(
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore_rounded,
+                label: "Explore",
+              ),
+              GlassBottomNavBarItem(
+                icon: Icons.favorite_border_rounded,
+                activeIcon: Icons.favorite_rounded,
+                label: "Favorites",
+              ),
+              GlassBottomNavBarItem(
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: "Profile",
+              ),
+            ],
+          ),
         ],
       ),
     );
