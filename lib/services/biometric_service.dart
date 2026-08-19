@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,11 +12,11 @@ class BiometricService {
     try {
       final canCheckBiometrics = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
-      print("Can check biometrics: $canCheckBiometrics");
-      print("Is device supported: $isDeviceSupported");
+      debugPrint("Can check biometrics: $canCheckBiometrics");
+      debugPrint("Is device supported: $isDeviceSupported");
       return canCheckBiometrics || isDeviceSupported;
     } catch (e) {
-      print("Biometric support check failed: $e");
+      debugPrint("Biometric support check failed: $e");
       return false;
     }
   }
@@ -26,10 +27,10 @@ class BiometricService {
         localizedReason: 'Authenticate to access the app',
         options: const AuthenticationOptions(biometricOnly: true),
       );
-      print("Biometric authentication result: $authenticated");
+      debugPrint("Biometric authentication result: $authenticated");
       return authenticated;
     } catch (e) {
-      print("Biometric authentication failed: $e");
+      debugPrint("Biometric authentication failed: $e");
       return false;
     }
   }

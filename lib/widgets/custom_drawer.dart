@@ -28,7 +28,7 @@ class CustomDrawer extends StatefulWidget {
   });
 
   @override
-  _CustomDrawerState createState() => _CustomDrawerState();
+  State<CustomDrawer> createState() => _CustomDrawerState();
 }
 
 class _CustomDrawerState extends State<CustomDrawer> {
@@ -212,19 +212,19 @@ class _CustomDrawerState extends State<CustomDrawer> {
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: () async {
-              await context.read<UserAuthProvider>().signOut();
+              final auth = context.read<UserAuthProvider>();
+              final navigator = Navigator.of(context);
+              await auth.signOut();
               
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
               
-              if (mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LoginScreen(),
-                  ),
-                );
-              }
+              if (!mounted) return;
+              navigator.pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const LoginScreen(),
+                ),
+              );
             },
           ),
           Padding(
