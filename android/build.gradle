@@ -20,7 +20,7 @@ subprojects {
                 compileSdk = 36
                 if (namespace == null) {
                     if (project.name == "flutter_wallpaper_manager") {
-                        namespace = "com.ichPlatform.flutter_wallpaper_manager"
+                        namespace = "com.pk.wallpapermanager.flutter_wallpaper_manager"
                     } else {
                         namespace = "com.plugin.${project.name.replace(':', '_').replace('-', '_')}"
                     }
