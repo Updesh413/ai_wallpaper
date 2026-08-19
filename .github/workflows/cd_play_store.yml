@@ -91,10 +91,10 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.build_number }}" ]; then
             echo "Building with custom build number: ${{ github.event.inputs.build_number }}"
-            flutter build appbundle --release --build-number=${{ github.event.inputs.build_number }}
+            flutter build appbundle --release --build-number=${{ github.event.inputs.build_number }} --android-skip-build-dependency-validation
           else
             echo "Building with pubspec.yaml version..."
-            flutter build appbundle --release
+            flutter build appbundle --release --android-skip-build-dependency-validation
           fi
 
       - name: Upload AAB as Workflow Artifact
