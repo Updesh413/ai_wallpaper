@@ -12,12 +12,19 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
     
-    // Force all subprojects to use compileSdk 36
+    // Force all subprojects to use compileSdk 36 and assign namespace if missing
     project.plugins.whenPluginAdded { plugin ->
         if (plugin.class.name == "com.android.build.gradle.AppPlugin" || 
             plugin.class.name == "com.android.build.gradle.LibraryPlugin") {
             project.android {
                 compileSdk = 36
+                if (namespace == null) {
+                    if (project.name == "flutter_wallpaper_manager") {
+                        namespace = "com.ichPlatform.flutter_wallpaper_manager"
+                    } else {
+                        namespace = "com.plugin.${project.name.replace(':', '_').replace('-', '_')}"
+                    }
+                }
             }
         }
     }
